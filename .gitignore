@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Data files
+input/*.csv
+output/*.json
+logs/*.txt
+
+# PyCharm (JetBrains IDEs)
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
