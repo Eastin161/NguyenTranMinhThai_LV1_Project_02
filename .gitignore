@@ -11,7 +11,7 @@ venv/
 # Data files
 input/*.csv
 output/*.json
-logs/*.txt
+
 
 # PyCharm (JetBrains IDEs)
 .idea/
