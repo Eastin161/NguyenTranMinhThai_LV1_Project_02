@@ -11,4 +11,4 @@ A Python tool for scraping product information from Tiki.vn API with robust erro
 - 🚀 **Rate Limit Handling**: Respects API rate limits with intelligent waiting
 - 💾 **JSON Output**: Clean, structured JSON output for easy data processing
 
-## Project Structure
+
