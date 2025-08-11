@@ -9,7 +9,7 @@ venv/
 .venv/
 
 # Data files
-input/*.csv
+#input/*.csv
 output/*.json
 
 
