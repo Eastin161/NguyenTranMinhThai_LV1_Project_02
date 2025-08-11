@@ -4,7 +4,7 @@ A Python tool for scraping product information from Tiki.vn API with robust erro
 
 ## Features
 
-- ✅ **Batch Processing**: Process thousands of product IDs in configurable chunks
+- ✅ **Batch Processing**: Process 200,000 of product IDs in configurable chunks
 - 🔄 **Retry Logic**: Automatic retry with exponential backoff for failed requests
 - 🔍 **Duplicate Detection**: Identifies and logs duplicate product IDs before processing
 - 📊 **Comprehensive Logging**: Detailed error logs and processing statistics
