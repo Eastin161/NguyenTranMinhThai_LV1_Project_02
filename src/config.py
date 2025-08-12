@@ -1,4 +1,3 @@
-
 import os
 
 class Config:
@@ -30,6 +29,10 @@ class Config:
 
         # Create directories if they don't exist
         self._create_directories()
+
+        # Threading settings
+        self.MAX_WORKERS = 10  # number of threads
+        self.DELAY_BETWEEN_CALLS = 0.3  # seconds between requests
 
     def _create_directories(self):
         for directory in [self.INPUT_DIR, self.OUTPUT_DIR, self.LOGS_DIR]:

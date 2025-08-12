@@ -16,6 +16,11 @@ def retry_only():
     scraper = TikiScraper(Config())
     scraper.retry_failed_ids()
 
+def main_threaded():
+    scraper = TikiScraper(Config())
+    scraper.main_threaded()
+
 if __name__ == "__main__":
-    main()
+    main_threaded()  # Use threading for multiproceesing
+    #main()          # Use 1 process
     # retry_only()

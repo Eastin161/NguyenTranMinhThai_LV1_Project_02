@@ -1,9 +1,10 @@
-
 import requests
 import json
 import os
 import time
 from bs4 import BeautifulSoup
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
 
 class TikiScraper:
     def __init__(self, config):
@@ -206,3 +207,104 @@ class TikiScraper:
 
         print(f"✅ Process completed!")
         print(f"📊 Summary: {len(unique_product_ids)} unique IDs, {len(duplicates)} duplicates, {len(errors)} errors")
+
+    def main_threaded(self):
+        """Main scraping process with threading"""
+        print("🚀 Loading product IDs...")
+        all_product_ids = self.load_ids()
+
+        if not all_product_ids:
+            print("❌ No product IDs found. Please check your input file.")
+            return
+
+        print(f"📊 Loaded {len(all_product_ids)} total IDs")
+
+        # Check for duplicates
+        print("🔍 Checking for duplicates...")
+        unique_product_ids, duplicates = self.check_duplicates(all_product_ids)
+        print(f"✨ Found {len(unique_product_ids)} unique IDs")
+
+        # Save duplicates log
+        self.save_duplicates(duplicates)
+
+        products = []
+        errors = []
+        file_index = 1
+
+        print(f"🚀 Starting with {len(unique_product_ids)} IDs using {self.config.MAX_WORKERS} threads...")
+
+        with ThreadPoolExecutor(max_workers=self.config.MAX_WORKERS) as executor:
+            # Submit all tasks and store futures with their corresponding product IDs
+            future_to_pid = {executor.submit(self.fetch_product_threaded, pid): pid for pid in unique_product_ids}
+            
+            for i, future in enumerate(tqdm(as_completed(future_to_pid), total=len(future_to_pid)), 1):
+                try:
+                    result, error = future.result()
+                    if result:
+                        products.append(result)
+                        print(f"✅ Added product ID {result['id']}")
+                    if error:
+                        errors.append(error)
+
+                    if len(products) == self.config.CHUNK_SIZE:
+                        self.save_chunk(products, file_index)
+                        file_index += 1
+                        products = []
+
+                except Exception as e:
+                    pid = future_to_pid[future]
+                    print(f"🔥 Crash for ID {pid}: {type(e).__name__}: {e}")
+                    errors.append(f"{pid},ThreadCrash:{type(e).__name__}:{e}")
+
+        if products:
+            self.save_chunk(products, file_index)
+
+        # Save errors
+        if errors:
+            with open(self.config.ERROR_FILE, "w", encoding="utf-8") as f:
+                f.write("product_id,status\n")
+                for line in errors:
+                    f.write(line + "\n")
+        print(f"⚠️ Saved {len(errors)} failed IDs to {self.config.ERROR_FILE}")
+
+        print(f"✅ Process completed!")
+        print(f"📊 Summary: {len(unique_product_ids)} unique IDs, {len(duplicates)} duplicates, {len(errors)} errors")
+
+    def fetch_product_threaded(self, product_id):
+        """Fetch product with threading-compatible return format"""
+        import time
+        
+        for attempt in range(1, self.config.MAX_RETRIES + 1):
+            try:
+                time.sleep(self.config.DELAY_BETWEEN_CALLS)
+                url = self.config.BASE_URL.format(product_id)
+                response = self.session.get(url, headers=self.config.HEADERS, timeout=10)
+
+                if response.status_code == 429:
+                    wait_time = int(response.headers.get("Retry-After", 2))
+                    print(f"⏳ 429 Too Many Requests for ID {product_id}, retrying after {wait_time} sec (attempt {attempt})")
+                    time.sleep(wait_time)
+                    continue
+
+                if response.status_code != 200:
+                    return None, f"{product_id},{response.status_code}"
+
+                try:
+                    data = response.json()
+                except Exception as e:
+                    return None, f"{product_id},JSONDecodeError:{e}"
+
+                return {
+                    "id": data.get("id"),
+                    "name": data.get("name"),
+                    "url_key": data.get("url_key"),
+                    "price": data.get("price"),
+                    "description": self.clean_description(data.get("description", "")),
+                    "images": [img.get("thumbnail_url") for img in data.get("images", []) if img.get("thumbnail_url")]
+                }, None
+
+            except Exception as e:
+                print(f"🔥 Exception for ID {product_id} on attempt {attempt}: {e}")
+                time.sleep(2)
+
+        return None, f"{product_id},FailedAfter{self.config.MAX_RETRIES}Retries"
